@@ -9,7 +9,8 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var valInput: String = ""
-    @State private var rowValues: [RowContents] = RowContents.get_values()
+    @State private var itemInput: String = ""
+    @State var itemTable: Table = Table.init()
     
     var body: some View {
         VStack {
@@ -24,12 +25,14 @@ struct ContentView: View {
             Grid {
                 GridRow {
                     Text("Item: ").frame(maxWidth: .infinity, alignment: .leading)
-                    Text(" ")}
+                    Text(" ")
+                        .padding([.horizontal], 35)
+                }
                 .bold()
                 Divider()
                     .gridCellUnsizedAxes(.horizontal)
                     .overlay(Color.primary)
-                ForEach(rowValues) { row in
+                ForEach(itemTable.rows) { row in
                     GridRow {
                         Text(row.itemname).frame(maxWidth: .infinity, alignment: .leading)
                         Text(row.cost.formatted())
@@ -40,12 +43,18 @@ struct ContentView: View {
                 }
             }
             .padding()
+            HStack {
+            TextField("Item",
+                       text: $itemInput)
+            .keyboardType(.numberPad)
+            .padding([.leading], 30)
             Spacer()
-            TextField( "Enter Amount",
+            TextField("Amount",
                        text: $valInput)
             .keyboardType(.numberPad)
-            .padding([.vertical], 100)
             .padding()
+            }
+            Spacer()
         }
         
         //        .onReceive(valInput,
@@ -62,16 +71,75 @@ struct RowContents: Identifiable, Equatable {
     let cost: Float
     let itemname: String
     let id = UUID()
-    
-    static func get_values() -> [RowContents]{
-        return [RowContents(cost: 10, itemname: "Sausages"),
-                RowContents(cost: 15, itemname: "Sangria"),
-                RowContents(cost: 1, itemname: "Smarties")]
-    }
 }
 
+struct Table: Identifiable, Equatable {
+    var rows: [RowContents] = [RowContents(cost: 10, itemname: "Sausages"),
+                              RowContents(cost: 15, itemname: "Sangria"),
+                              RowContents(cost: 1, itemname: "Smarties")]
+    let id = UUID()
+    
+    func saveRows(rows: [RowContents]) {
+        func transformRowToString(row: RowContents) -> [String: NSString] {
+            return [row.itemname : NSString(format: "%.2f", row.cost)]
+        }
+        let appData = UserDefaults.standard
+        let stringRows = rows.flatMap(transformRowToString)
+        print(stringRows)
+        appData.set(stringRows, forKey: "table")
+    }
+    
+    // decode rows
+    mutating func retrieveRows() {
+        
+        func transformRowsToObjects(rows: [String: String]) -> [RowContents] {
+            var listOfRows: [RowContents] = []
+            for (iname, price) in rows {
+                listOfRows.append(RowContents(cost: Float(price) ?? 0, itemname: iname))
+            }
+            return listOfRows
+        }
+        let appData = UserDefaults.standard
+        let stringTable = appData.object(forKey: "table") as? [String: String] ?? [String: String]()
+        rows = transformRowsToObjects(rows: stringTable)
+        print(rows)
+    }
+    
+    func get() -> [RowContents] {
+        return rows
+    }
+}
+                    
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
     }
 }
+
+// this function may need to be static
+// CHANGE TO USE USER DEFAULTS TO STORE DATA
+//    func saveValues(){
+//let str = "BOB" //getValues().
+//let filename = getDocumentsDirectory().appendingPathComponent("output.txt")
+//do {
+//    try str.write(to: filename, atomically: true, encoding: String.Encoding.utf8)
+//} catch {
+//    // failed to write file – bad permissions, bad filename, missing permissions, or more likely it can't be converted to the encoding
+//}
+//}
+//
+//func readValues() -> String {
+//let filename = getDocumentsDirectory().appendingPathComponent("output.txt")
+//var contents: String = " "
+//do {
+//    try contents = String(contentsOf: filename)
+//} catch {
+//    contents = "error: Could not access file"
+//}
+//return(contents)
+//}
+
+//func getDocumentsDirectory() -> URL {
+//let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+//return paths[0]
+//}
